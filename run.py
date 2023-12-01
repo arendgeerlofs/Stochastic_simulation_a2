@@ -1,7 +1,11 @@
 """
 Where to run simulations from
 """
-
-from functions import des
-
-des(n=4, new_costumers=1000, rho=0.9, mu=1, fifo=True, st_distribution='D')
+import numpy as np
+import matplotlib.pyplot as plt
+#from scipy import stats
+from functions import des, steady_state_plot
+CUSTOMERS = 500
+RUNS = 50
+RHO_VALUES = [0.25, 0.5, 0.75, 0.99]
+steady_state_plot(CUSTOMERS, RUNS, RHO_VALUES)
