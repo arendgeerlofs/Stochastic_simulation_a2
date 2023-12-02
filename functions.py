@@ -19,7 +19,7 @@ def source(env, number, arrival_rate, counter, mu, fifo, st_distribution):
 def customer(env, name, counter, mu, fifo, st_distribution):
     """Customer arrives, is served and leaves."""
     arrive = env.now
-
+    tib = 0
     # service time distributions
     if st_distribution == 'M':
         tib = random.expovariate(mu)
@@ -31,7 +31,6 @@ def customer(env, name, counter, mu, fifo, st_distribution):
             tib = random.expovariate(1/5)
         else:
             tib = random.expovariate(1)
-
     # Scheduling type
     if fifo:
         cr = counter.request()
@@ -48,9 +47,11 @@ def customer(env, name, counter, mu, fifo, st_distribution):
         yield env.timeout(tib)
     number = re.findall("\d+", name)[0]
     wait_times[int(number)] = wait
+    service_times[int(number)] = tib
+    sojurn_rates[int(number)] = (wait+tib)/tib
 
 
-def des(n, new_costumers, rho, mu, fifo, st_distribution):
+def des(n, new_customers, rho, mu, fifo, st_distribution):
     """
     Run DES model
     """
@@ -62,11 +63,15 @@ def des(n, new_costumers, rho, mu, fifo, st_distribution):
         return
 
     # Find lambda
-    arrival_rate = rho*mu*n  # Generate new customers roughly every x seconds
+    arrival_rate = rho*mu*n  # Generate new customers roughly every 1/arrival rate seconds
 
     # Set up data_arrays
     global wait_times
-    wait_times = np.zeros(new_costumers)
+    global service_times
+    global sojurn_rates
+    wait_times = np.zeros(new_customers)
+    service_times = np.zeros(new_customers)
+    sojurn_rates = np.zeros(new_customers)
 
     # Set up scheduling type
     if fifo:
@@ -75,14 +80,14 @@ def des(n, new_costumers, rho, mu, fifo, st_distribution):
         counter = simpy.PriorityResource(env, n)
 
     # Run DES process
-    env.process(source(env, new_costumers, arrival_rate, counter, mu, fifo, st_distribution))
+    env.process(source(env, new_customers, arrival_rate, counter, mu, fifo, st_distribution))
     env.run()
     #print(f"Amount of counters: {n}")
     #print(f"Load on machines: {rho}")
     #print(f'Average wait time per person: {np.sum(wait_times)/new_costumers}')
     #plt.hist(wait_times)
     #plt.show()
-    return np.mean(wait_times)
+    return wait_times, service_times, sojurn_rates
 
 def steady_state_plot(customers, runs, rho_values, mu=1, fifo=True, st_distribution='M'):
     """
@@ -90,14 +95,14 @@ def steady_state_plot(customers, runs, rho_values, mu=1, fifo=True, st_distribut
     Used to show convergence to steady state
     """
     for rho_index, rho in enumerate(rho_values):
-        data = np.zeros((3, customers, runs))
+        data = np.zeros((3, int(customers), runs))
         for index_j, j in enumerate([1, 2, 4]):
-            for c in range(customers):
+            for c in range(0, customers):
                 for i in range(runs):
-                    data[index_j][c][i] = des(j, c+1, rho, mu, fifo, st_distribution)
+                    data[index_j][int(c)][i] = np.mean(des(j, c+1, rho, mu, fifo, st_distribution)[0])
         means = np.mean(data, axis=2)
         stds = np.std(data, axis=2)
-        xdata = np.linspace(1, customers, customers)
+        xdata = np.linspace(1, customers, int(customers))
         plt.plot(xdata, means[0], 'r', label='n=1')
         plt.plot(xdata, means[1], 'b', label='n=2')
         plt.plot(xdata, means[2], 'g', label='n=4')
@@ -107,7 +112,34 @@ def steady_state_plot(customers, runs, rho_values, mu=1, fifo=True, st_distribut
         plt.legend()
         plt.xlabel("Amount of customers")
         plt.ylabel("Average waiting time per customer")
-        plt.title("Convergence of waiting time into steady state")
-        plt.savefig(f"SS_{rho_index}", dpi=300)
+        plt.savefig(f"test{rho_index}", dpi=300)
         plt.show()
 
+def histograms(customers, runs, rho_values, queues=1, mu=1, fifo=True, st_distribution='M', name="hist"):
+    for rho in rho_values:
+        wait_times_run = np.zeros((runs, customers))
+        service_times_run = np.zeros((runs, customers))
+        sojurn_rates_run = np.zeros((runs, customers))
+        for i in range(runs):
+            wait_time, service_time, sojurn_rate = des(queues, customers, rho, mu, fifo, st_distribution)
+            wait_times_run[i] = wait_time
+            service_times_run[i] = service_time
+            sojurn_rates_run[i] = sojurn_rate
+        wait_times_run = np.mean(wait_times_run, axis=0)
+        service_times_run = np.mean(service_times_run, axis=0)
+        sojurn_rates_run = np.mean(sojurn_rates_run, axis=0)
+        plt.hist(wait_times_run, 20)
+        plt.xlabel("Wait time bins")
+        plt.ylabel("Amount of customers")
+        plt.savefig(f"wait_{name}", dpi=300)
+        plt.show()
+        plt.hist(service_times_run, 20)
+        plt.xlabel("Service time bins")
+        plt.ylabel("Amount of customers")
+        plt.savefig(f"service_{name}", dpi=300)
+        plt.show()
+        plt.hist(sojurn_rates_run, 20)
+        plt.xlabel("Sojurn time / service time bins")
+        plt.ylabel("Amount of customers")
+        plt.savefig(f"sojurn_{name}", dpi=300)
+        plt.show()
