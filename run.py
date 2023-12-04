@@ -3,7 +3,7 @@ Where to run simulations from
 """
 import numpy as np
 import scipy.stats as stats
-from functions import des, steady_state_plot, histograms
+from functions import des, steady_state_plot, histograms, stats_ns_waittimes, run_fifo_sjf, plot_fifo_sjf
 CUSTOMERS = 2500
 RUNS = 100
 RHO_VALUES = [0.99, 0.9, 0.75, 0.5]
@@ -37,3 +37,8 @@ for i in range(12):
         if i != j:
             t_table[i][j] =stats.ttest_ind(wait_data[i], wait_data[j], equal_var=False)[0]
 print(t_table)
+
+n_values = [1,2,4]
+stats_ns_waittimes(CUSTOMERS, RUNS, RHO_VALUES, n_values, mu=1, fifo=True, st_distribution='M')
+data_mean, data_CI = run_fifo_sjf(CUSTOMERS, RUNS, RHO_VALUES, n = 1, mu=1, st_distribution='M')
+plot_fifo_sjf(RHO_VALUES, data_mean, data_CI)

@@ -225,6 +225,7 @@ def run_fifo_sjf(new_costumers, runs, rhos, n = 1, mu=1, st_distribution='M'):
                                                             data[1, rho_index, :])
         print(f'For rho = {rho}, the Mann-Whitney U-test has a value of {U[rho_index]}',
                f' with a significance of p_ttest = {p_MW[rho_index]}')
+    return [data_mean, data_CI]
 
 def plot_fifo_sjf(rhos, data_mean, data_CI):
     '''
