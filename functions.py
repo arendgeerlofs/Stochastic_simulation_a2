@@ -90,15 +90,19 @@ def steady_state_plot(customers, runs, rho_values, mu=1, fifo=True, st_distribut
     Plot average wait time for different amounts of customers and runs
     Used to show convergence to steady state
     """
+    # For all hyperparameters gather data
     for rho_index, rho in enumerate(rho_values):
         data = np.zeros((3, int(customers), runs))
         for ind_j, j in enumerate([1, 2, 4]):
             for c in range(0, customers):
                 for i in range(runs):
+                    # Run simulation
                     data[ind_j][int(c)][i] = np.mean(des(j, c+1, rho, mu, fifo, st_distribution)[0])
+        # Get average and std of data
         means = np.mean(data, axis=2)
         stds = np.std(data, axis=2)
         xdata = np.linspace(1, customers, int(customers))
+        # Plot all data with confidence intervals
         plt.plot(xdata, means[0], 'r', label='n=1')
         plt.plot(xdata, means[1], 'b', label='n=2')
         plt.plot(xdata, means[2], 'g', label='n=4')
@@ -118,9 +122,12 @@ def histograms(customers, runs, rho_values, queues=1, mu=1, fifo=True, st_dist='
     for rho in rho_values:
         wait_times_run = np.zeros((runs, customers))
         for i in range(runs):
+            # Get wait times per customer
             wait_time = des(queues, customers, rho, mu, fifo, st_dist)
             wait_times_run[i] = wait_time
+        # Get mean if multiple runs
         wait_times_run = np.mean(wait_times_run, axis=0)
+        # Plot histogram of wait times
         plt.hist(wait_times_run, 20)
         plt.xlabel("Wait time bins")
         plt.ylabel("Amount of customers")
